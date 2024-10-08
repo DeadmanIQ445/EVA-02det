@@ -1,0 +1,21 @@
+timm
+Pillow
+blobfile
+mypy
+numpy
+pytest
+requests
+einops
+tensorboardX
+deepspeed==0.6.5
+torch==2.1.1
+--extra-index-url  https://download.pytorch.org/whl/cu121
+
+scipy
+sh
+wandb
+ftfy
+regex
+opencv-python
+xformers==0.0.23
+geopandas

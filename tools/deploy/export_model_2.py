@@ -8,8 +8,7 @@ from torch import Tensor, nn
 
 import detectron2.data.transforms as T
 from detectron2.checkpoint import DetectionCheckpointer
-from detectron2.config import get_cfg
-from detectron2.data import build_detection_test_loader, detection_utils
+from detectron2.data import  detection_utils
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset, print_csv_format
 from detectron2.export import (
     STABLE_ONNX_OPSET_VERSION,
@@ -17,7 +16,7 @@ from detectron2.export import (
     dump_torchscript_IR,
     scripting_with_instances,
 )
-from detectron2.modeling import GeneralizedRCNN, RetinaNet, build_model
+from detectron2.modeling import GeneralizedRCNN, RetinaNet
 from detectron2.modeling.postprocessing import detector_postprocess
 # from detectron2.projects.point_rend import add_pointrend_config
 from detectron2.structures import Boxes
@@ -27,14 +26,16 @@ from detectron2.utils.logger import setup_logger
 
 from detectron2.config import LazyConfig, instantiate
 from detectron2.engine import (
-    AMPTrainer,
-    SimpleTrainer,
-    default_argument_parser,
     default_setup,
-    default_writers,
-    hooks,#导入hooks模块
-    launch,
 )
+
+
+
+
+# import xformers
+# from torch.onnx import register_custom_op_symbolic
+
+# register_custom_op_symbolic('xformers::efficient_attention_forward_cutlass', xformers.ops.memory_efficient_attention, 19)
 
 def setup_cfg(args):
     # cfg = get_cfg()
@@ -48,7 +49,7 @@ def setup_cfg(args):
     #cfg = LazyConfig.apply_overrides(cfg, args.opts)：根据命令行参数中的覆盖选项，修改配置文件中的配置项。
     # 这可以用于在命令行中修改配置，例如更改学习率、批大小等。
     cfg = LazyConfig.apply_overrides(cfg, args.opts)
-    print(cfg)
+
     #增加start=========
     # cfg.DATASETS.TRAIN=instantiate(cfg.DATASETS.TRAIN)
     # #print("cfg.DATASETS.TRAIN:",cfg.DATASETS.TRAIN)
@@ -165,8 +166,12 @@ def export_tracing(torch_model, inputs):
             torch.jit.save(ts_model, f)
         dump_torchscript_IR(ts_model, args.output)
     elif args.format == "onnx":
+
         with PathManager.open(os.path.join(args.output, "model.onnx"), "wb") as f:
-            torch.onnx.export(traceable_model, (image,), f, opset_version=STABLE_ONNX_OPSET_VERSION)
+            # torch.backends.cuda.enable_mem_efficient_sdp(True)
+            # torch.backends.cuda.enable_flash_sdp(False)
+            torch.onnx.export(traceable_model, (image,), f, opset_version=16)
+            # torch.onnx.dynamo_export(traceable_model, (image,))
     logger.info("Inputs schema: " + str(traceable_model.inputs_schema))
     logger.info("Outputs schema: " + str(traceable_model.outputs_schema))
 
@@ -189,6 +194,15 @@ def export_tracing(torch_model, inputs):
 
 
 def get_sample_inputs(args):
+
+    import cv2
+    import glob
+    for i in glob.glob('/home/ibragim/data/siz_segment/images/val/*'):
+        img = cv2.imread(i)
+        height, width = img.shape[:2]
+        img2 = cv2.resize(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), (250, 250))
+        image = torch.as_tensor(img2.astype("float32").transpose(2, 0, 1), device='cpu')
+        return [{'image':image}]
 
     if args.sample_image is None:
         # get a first batch from dataset
@@ -232,6 +246,7 @@ if __name__ == "__main__":
     parser.add_argument("--sample-image", default=None, type=str, help="sample image for input")
     parser.add_argument("--run-eval", action="store_true")
     parser.add_argument("--output", help="output directory for the converted model")
+    parser.add_argument("--weights", )
     parser.add_argument(
         "opts",
         help="Modify config options using the command-line",
@@ -251,27 +266,14 @@ if __name__ == "__main__":
     #torch_model = build_model(cfg)
     torch_model = instantiate(cfg.model)  # 创建了目标检测模型，cfg.model 包含了用于构建模型的配置信息。
     torch_model.to(cfg.train.device)  # 模型移动到指定的计算设备，通常是 GPU
-    DetectionCheckpointer(torch_model).resume_or_load("/home/arina/repos/EVA/EVA-02/det/outputs/bpla_winter_oil_2048/model_0001999.pth")
+    DetectionCheckpointer(torch_model).resume_or_load(args.weights)
     torch_model.eval()
 
+
+    
+
     # get sample data
-    import glob, cv2
-
-    for i in glob.glob('/home/arina/projs/spils/BPLA_winter/yolo_01/images/val/*'):
-        img = cv2.imread(i)
-        height, width = img.shape[:2]
-        factor = max(height, width)/2048
-        dim = (int(height//factor), int(width//factor))
-        # print(dim, type(dim[1]))
-        img2 = cv2.resize(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), (dim[1], dim[0]))
-        with torch.no_grad():
-
-            height, width = dim
-
-            image = torch.as_tensor(img2.astype("float32").transpose(2, 0, 1), device='cuda')
-            sample_inputs = [{"image": image, "height": torch.tensor(height), "width": torch.tensor(width)}]
-
-            break
+    sample_inputs = get_sample_inputs(args)
     # convert and save model
     if args.export_method == "caffe2_tracing":
         exported_model = export_caffe2_tracing(cfg, torch_model, sample_inputs)

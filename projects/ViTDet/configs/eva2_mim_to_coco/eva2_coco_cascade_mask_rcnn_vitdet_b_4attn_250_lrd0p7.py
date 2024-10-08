@@ -1,6 +1,6 @@
 from functools import partial
 
-from ..common.coco_loader_lsj_1024 import dataloader
+from ..common.coco_loader_lsj_250 import dataloader
 from .cascade_mask_rcnn_vitdet_b_100ep import (
     # dataloader,
     lr_multiplier,
@@ -11,16 +11,16 @@ from .cascade_mask_rcnn_vitdet_b_100ep import (
 )
 train.init_checkpoint = "/home/ibragim/repos/EVA-02det/eva02_B_coco_bsl.pth"
 
-model.backbone.net.img_size = 1024 
-model.backbone.square_pad = 1024  
+model.backbone.net.img_size = 250 
+model.backbone.square_pad = 250  
 model.backbone.net.patch_size = 16  
 model.backbone.net.window_size = 16 
-model.backbone.net.embed_dim = 768
+model.backbone.net.embed_dim = 250
 model.backbone.net.depth = 12
 model.backbone.net.num_heads = 12
 model.backbone.net.mlp_ratio = 4*2/3
 model.backbone.net.use_act_checkpoint = False
-model.backbone.net.drop_path_rate = 0.1
+model.backbone.net.drop_path_rate = 0.2
 # 2, 5, 8, 11 for global attention
 model.backbone.net.window_block_indexes = [0, 1, 3, 4, 6, 7, 9, 10]
 
@@ -28,7 +28,7 @@ model.backbone.net.window_block_indexes = [0, 1, 3, 4, 6, 7, 9, 10]
 #     i.requires_grad = False
 model.roi_heads.num_classes = 7
 
-optimizer.lr=5e-5
+optimizer.lr=3e-4
 optimizer.params.lr_factor_func = partial(get_vit_lr_decay_rate, lr_decay_rate=0.7, num_layers=12)
 optimizer.params.overrides = {}
 optimizer.params.weight_decay_norm = None
@@ -42,5 +42,5 @@ lr_multiplier.scheduler.num_updates = train.max_iter
 lr_multiplier.warmup_length = 500 / train.max_iter
 
 dataloader.test.num_workers=0
-dataloader.train.total_batch_size=9
+dataloader.train.total_batch_size=27
 

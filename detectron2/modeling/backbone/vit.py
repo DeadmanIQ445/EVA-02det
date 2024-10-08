@@ -7,6 +7,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
+# import xformers.ops.fmha as fmha
+
+
 from detectron2.layers import CNNBlockBase, Conv2d, get_norm
 from detectron2.modeling.backbone.fpn import _assert_strides_are_log2_contiguous
 
@@ -114,21 +118,38 @@ class Attention(nn.Module):
         v = v.reshape(B, N, self.num_heads, -1).permute(0, 2, 1, 3) 
 
         ## rope
+        # print(q.shape, k.shape, v.shape)
+        # exit()
         q = self.rope(q).type_as(v)
         k = self.rope(k).type_as(v)
 
-        if self.xattn:
-            q = q.permute(0, 2, 1, 3)   # B, num_heads, N, C -> B, N, num_heads, C
-            k = k.permute(0, 2, 1, 3)
-            v = v.permute(0, 2, 1, 3)
+        # if self.xattn:
+        #     q = q.permute(0, 2, 1, 3)   # B, num_heads, N, C -> B, N, num_heads, C
+        #     k = k.permute(0, 2, 1, 3)
+        #     v = v.permute(0, 2, 1, 3)
             
-            x = xops.memory_efficient_attention(q, k, v)
-            x = x.reshape(B, N, -1)
-        else:
-            q = q * self.scale
-            attn = (q @ k.transpose(-2, -1))
-            attn = attn.softmax(dim=-1).type_as(x)
-            x = (attn @ v).transpose(1, 2).reshape(B, N, -1)
+            # x = xops.memory_efficient_attention(q, k, v,)
+        #     x = x.reshape(B, N, -1)
+        # if self.xattn:
+        #     # q = q.permute(0, 2, 1, 3)   # B, num_heads, N, C -> B, N, num_heads, C
+        #     # k = k.permute(0, 2, 1, 3)
+        #     # v = v.permute(0, 2, 1, 3)
+        #     # with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False):
+        #     x = F.scaled_dot_product_attention(q, k, v).transpose(1, 2)
+        #     x = x.reshape(B, N, -1)
+        # else:
+            # q = q * self.scale
+            # attn = (q @ k.transpose(-2, -1))
+            # attn = attn.softmax(dim=-1).type_as(x)
+            # x = (attn @ v).transpose(1, 2).reshape(B, N, -1)
+        # q = q * self.scale
+        # attn = (q @ k.transpose(-2, -1))
+        # attn = attn.softmax(dim=-1).type_as(x)
+        # x = (attn @ v).transpose(1, 2).reshape(B, N, -1)
+        # with torch.backends.cuda.sdp_kernel(enable_flash=False, enable_math=True, enable_mem_efficient=False):
+        
+        x = F.scaled_dot_product_attention(q, k, v).transpose(1, 2)
+        x = x.reshape(B, N, -1)
 
         x = self.proj(x)
         x = x.view(B, H, W, C)

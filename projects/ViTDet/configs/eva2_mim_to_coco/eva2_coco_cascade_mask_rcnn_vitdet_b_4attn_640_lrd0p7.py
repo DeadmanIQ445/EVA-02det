@@ -1,6 +1,6 @@
 from functools import partial
 
-from ..common.coco_loader_lsj_1024 import dataloader
+from ..common.coco_loader_lsj_640 import dataloader
 from .cascade_mask_rcnn_vitdet_b_100ep import (
     # dataloader,
     lr_multiplier,
@@ -11,8 +11,8 @@ from .cascade_mask_rcnn_vitdet_b_100ep import (
 )
 train.init_checkpoint = "/home/ibragim/repos/EVA-02det/eva02_B_coco_bsl.pth"
 
-model.backbone.net.img_size = 1024 
-model.backbone.square_pad = 1024  
+model.backbone.net.img_size = 640 
+model.backbone.square_pad = 640  
 model.backbone.net.patch_size = 16  
 model.backbone.net.window_size = 16 
 model.backbone.net.embed_dim = 768
@@ -28,7 +28,7 @@ model.backbone.net.window_block_indexes = [0, 1, 3, 4, 6, 7, 9, 10]
 #     i.requires_grad = False
 model.roi_heads.num_classes = 7
 
-optimizer.lr=5e-5
+optimizer.lr=5e-6
 optimizer.params.lr_factor_func = partial(get_vit_lr_decay_rate, lr_decay_rate=0.7, num_layers=12)
 optimizer.params.overrides = {}
 optimizer.params.weight_decay_norm = None
@@ -36,11 +36,11 @@ optimizer.params.weight_decay_norm = None
 
 train.max_iter = 20000
 lr_multiplier.scheduler.milestones = [
-    train.max_iter*2//10, train.max_iter*9//10
+    train.max_iter*3//10, train.max_iter*9//10
 ]
 lr_multiplier.scheduler.num_updates = train.max_iter
 lr_multiplier.warmup_length = 500 / train.max_iter
 
 dataloader.test.num_workers=0
-dataloader.train.total_batch_size=9
+dataloader.train.total_batch_size=18
 

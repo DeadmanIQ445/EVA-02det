@@ -26,7 +26,7 @@ model.backbone.net.window_block_indexes = [0, 1, 3, 4, 6, 7, 9, 10]
 
 # for i in model.backbone.layers:
 #     i.requires_grad = False
-model.roi_heads.num_classes = 2
+model.roi_heads.num_classes = 7
 
 optimizer.lr=5e-6
 optimizer.params.lr_factor_func = partial(get_vit_lr_decay_rate, lr_decay_rate=0.7, num_layers=12)

@@ -4,11 +4,12 @@ from detectron2.config import LazyCall as L
 
 # Data using LSJ
 image_size = 1024
-dataloader = model_zoo.get_config("common/data/coco_oil_bpla_0.py").dataloader
+dataloader = model_zoo.get_config("common/data/coco_siz_cropped.py").dataloader
 dataloader.train.mapper.augmentations = [
     L(T.RandomFlip)(horizontal=True),  # flip first
+    L(T.RandomBrightness)(intensity_min=0.9,intensity_max=1.1),
     L(T.ResizeScale)(
-        min_scale=0.7, max_scale=1.3, target_height=image_size, target_width=image_size
+        min_scale=0.1, max_scale=2, target_height=image_size, target_width=image_size
     ),
     L(T.FixedSizeCrop)(crop_size=(image_size, image_size), pad=False),
 ]
