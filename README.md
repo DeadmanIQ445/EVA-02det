@@ -1,3 +1,16 @@
+Is a fork of an original [EVA project](https://github.com/baaivision/EVA/tree/master/EVA-02). Thank you to BAAIvision for their model.
+
+Compared to the original project, this repository uses torch 2 optimizations for transformers and is able to be exported to torchvision throught the tools/deploy/export_model_2.py code
+
+
+In order to export the model to torchscript - modify the export_model_2.py by setting the model's resoluton and by providing a path to a test image.
+
+```
+python3 tools/deploy/export_model_2.py --config-file projects/ViTDet/configs/eva2_mim_to_coco/eva2_coco_cascade_mask_rcnn_vitdet_b_4attn_250_lrd0p7.py  --output ./jit/siz/cropped_250/ --weights EVA-02det/outputs/outputs/model_0018999.pth --export-method tracing --format torchscript
+```
+
+
+
 # EVA-02: Object Detection & Instance Segmentation
 
 We provide evaluation and training code on Object365, COCO and LVIS datasets.
